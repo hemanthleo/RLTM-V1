@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RLTM V1 - Interactive Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Slate & Blue -->
+    <!-- Application Structure Plan: The design is a single-page dashboard with a sticky navigation bar. This non-linear structure is superior to a linear report, allowing users (stakeholders, new developers) to explore sections in any order. Key sections include an overview, an interactive 9-step workflow diagram (where clicking a step reveals details), a technology stack showcase, a performance dashboard with a Chart.js visual, and a functional GSD calculator. This architecture is designed for active exploration and understanding, transforming static data (like the GSD tables) into interactive tools. -->
+    <!-- Visualization & Content Choices: 
+        1. 9-Step Workflow: Replaced the static list with an interactive HTML/CSS/JS component. User clicks a step (e.g., "Step 3: Flight-Line Detection") to update a details pane. Goal: Organize/Explore. Justification: Makes a dense process digestible and engaging.
+        2. Performance Chart: Used Chart.js for a bar chart showing min/max batch processing times. Goal: Inform. Justification: Visually quantifies the pipeline's speed, which is a key selling point.
+        3. GSD Calculator: Created an interactive tool from the static GSD Report. User selects a camera, inputs GSD, and JS calculates the final GSD using the report's formula. Goal: Interact/Synthesize. Justification: Turns a static reference table into a useful, practical tool for users.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            color: #1e293b; /* slate-800 */
+        }
+        nav {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+        .stat-card {
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+        .tech-card {
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .workflow-step {
+            cursor: pointer;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0; /* slate-200 */
+            transition: all 0.2s ease;
+            margin-bottom: 0.5rem;
+        }
+        .workflow-step:hover {
+            background-color: #f1f5f9; /* slate-100 */
+        }
+        .workflow-step.active {
+            background-color: #2563eb; /* blue-600 */
+            color: #ffffff;
+            border-color: #2563eb;
+            font-weight: 600;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 48rem; /* max-w-lg */
+            margin-left: auto;
+            margin-right: auto;
+            height: 24rem; /* h-96 */
+            max-height: 400px;
+            background-color: #ffffff;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 20rem; /* h-80 */
+            }
+        }
+        .calc-result {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+        .calc-result-good { color: #16a34a; } /* green-600 */
+        .calc-result-warn { color: #ca8a04; } /* yellow-600 */
+        .calc-result-bad { color: #dc2626; } /* red-600 */
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <!-- Header & Navigation -->
+    <header class="sticky top-0 z-50 border-b border-slate-200">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex-shrink-0 flex items-center">
+                    <span class="text-2xl font-bold text-blue-600">RLTM V1</span>
+                    <span class="ml-2 text-xl font-semibold text-slate-600 hidden md:block">Dashboard</span>
+                </div>
+                <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                    <a href="#overview" class="font-medium text-slate-600 hover:text-blue-600 transition-colors">Overview</a>
+                    <a href="#workflow" class="font-medium text-slate-600 hover:text-blue-600 transition-colors">Workflow</a>
+                    <a href="#technology" class="font-medium text-slate-600 hover:text-blue-600 transition-colors">Technology</a>
+                    <a href="#performance" class="font-medium text-slate-600 hover:text-blue-600 transition-colors">Performance</a>
+                    <a href="#gsd" class="font-medium text-slate-600 hover:text-blue-600 transition-colors">GSD Calculator</a>
+                    <a href="#status" class="font-medium text-slate-600 hover:text-blue-600 transition-colors">Status</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto p-4 md:p-8">
+
+        <!-- Overview Section -->
+        <section id="overview" class="mb-16 scroll-mt-20">
+            <h1 class="text-4xl font-bold mb-6 text-center">RLTM V1: Rapid Live Tactical Mapping</h1>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h2 class="text-2xl font-semibold text-blue-600 mb-3">The Challenge</h2>
+                    <p class="text-lg leading-relaxed mb-4">
+                        Processing massive aerial datasets (1,000+ images) is a major bottleneck. Traditional photogrammetry workflows demand immense computational resources (RAM/CPU) and can take hours, or even days, to generate a single map.
+                    </p>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-semibold text-blue-600 mb-3">The "Divide & Conquer" Solution</h2>
+                    <p class="text-lg leading-relaxed">
+                        RLTM V1 is an automated, high-speed pipeline that splits a massive job into small, overlapping batches. It processes these lightweight batches sequentially and stitches them into a seamless Cloud Optimized GeoTIFF (COG), transforming raw data into a finished map in a fraction of the time.
+                    </p>
+                </div>
+            </div>
+
+            <div class="mt-12">
+                <h3 class="text-3xl font-bold text-center mb-8">Core Innovations</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="stat-card text-center">
+                        <span class="text-4xl">🤖</span>
+                        <h4 class="text-xl font-semibold mt-4 mb-2">ML-Driven Batching</h4>
+                        <p class="text-slate-600">Uses DBSCAN to analyze flight paths and create logical, efficient batches instead of dumb grids.</p>
+                    </div>
+                    <div class="stat-card text-center">
+                        <span class="text-4xl">🔧</span>
+                        <h4 class="text-xl font-semibold mt-4 mb-2">Automated Data Correction</h4>
+                        <p class="text-slate-600">Automatically injects missing GPS data from CSVs directly into image EXIFs, saving hours of prep.</p>
+                    </div>
+                    <div class="stat-card text-center">
+                        <span class="text-4xl">✨</span>
+                        <h4 class="text-xl font-semibold mt-4 mb-2">Advanced Seamless Blending</h4>
+                        <p class="text-slate-600">A 2-stage merge using OpenCV feathering and GDAL stitching eliminates all visible "checkerboard" seams.</p>
+                    </div>
+                    <div class="stat-card text-center">
+                        <span class="text-4xl">🏞️</span>
+                        <h4 class="text-xl font-semibold mt-4 mb-2">Dual-Pipeline Optimization</h4>
+                        <p class="text-slate-600">Separate optimized parameters for Rural (Speed) and Urban (Accuracy) environments.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 9-Step Workflow Section -->
+        <section id="workflow" class="mb-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-8">The 9-Step Automated Workflow</h2>
+            <p class="text-xl text-center text-slate-600 max-w-3xl mx-auto mb-10">
+                The entire pipeline is managed by a central orchestrator. Click on any step below to see its purpose and the key technologies used.
+            </p>
+            <div class="flex flex-col md:flex-row gap-6 md:gap-10">
+                <!-- Step List -->
+                <div id="workflow-steps" class="flex-shrink-0 w-full md:w-1/3">
+                    <div class="workflow-step active" data-step="1">Step 1: Preprocessing & GPS Injection</div>
+                    <div class="workflow-step" data-step="2">Step 2: GPS Extraction</div>
+                    <div class="workflow-step" data-step="3">Step 3: Flight-Line Detection</div>
+                    <div class="workflow-step" data-step="4">Step 4: Parallel Grouping</div>
+                    <div class="workflow-step" data-step="5">Step 5: Batch Creation</div>
+                    <div class="workflow-step" data-step="6">Step 6: Verification</div>
+                    <div class="workflow-step" data-step="7">Step 7: Visualization</div>
+                    <div class="workflow-step" data-step="8">Step 8: ODM Processing (The Loop)</div>
+                    <div class="workflow-step" data-step="9">Step 9: Merging & Blending</div>
+                </div>
+                <!-- Details Pane -->
+                <div id="workflow-details" class="flex-grow bg-white p-6 rounded-lg shadow-lg min-h-[300px]">
+                    <h3 id="workflow-title" class="text-2xl font-semibold text-blue-600 mb-3"></h3>
+                    <p id="workflow-text" class="text-lg leading-relaxed mb-4"></p>
+                    <h4 class="text-lg font-semibold mb-2">Key Technologies:</h4>
+                    <div id="workflow-tech" class="flex flex-wrap gap-2">
+                        <!-- Tech badges will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Technology Stack Section -->
+        <section id="technology" class="mb-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-8">The Orchestrated Technology Stack</h2>
+            <p class="text-xl text-center text-slate-600 max-w-3xl mx-auto mb-10">
+                RLTM V1 works by orchestrating a stack of powerful, best-in-class open-source libraries, each with a specific and critical role.
+            </p>
+            <div id="tech-stack-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Tech cards will be injected here -->
+            </div>
+        </section>
+
+        <!-- Performance Dashboard Section -->
+        <section id="performance" class="mb-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-8">Performance Dashboard</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Key Stats -->
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="stat-card">
+                        <h3 class="text-lg font-semibold text-slate-500 mb-2">Total Processing Time (Rural)</h3>
+                        <p class="text-4xl font-bold text-blue-600">~1h 25m</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 class="text-lg font-semibold text-slate-500 mb-2">Typical Dataset</h3>
+                        <p class="text-4xl font-bold text-blue-600">~1,500</p>
+                        <p class="text-xl text-slate-600">Compressed Images</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 class="text-lg font-semibold text-slate-500 mb-2">Final GSD</h3>
+                        <p class="text-4xl font-bold text-blue-600">~4-8 cm/px</p>
+                        <p class="text-xl text-slate-600">Standard Mapping Grade</p>
+                    </div>
+                </div>
+                <!-- Chart -->
+                <div class="lg:col-span-2">
+                    <div class="chart-container">
+                        <canvas id="perfChart"></canvas>
+                    </div>
+                    <p class="text-center text-slate-600 mt-4">Average Batch Processing Time (Minutes)</p>
+                </div>
+            </div>
+
+            <!-- Rural vs Urban -->
+            <div class="mt-12 bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-2xl font-bold text-center mb-6">Dual-Pipeline Parameter Optimization</h3>
+                <div class="flex flex-col md:flex-row gap-6 justify-center">
+                    <!-- Rural -->
+                    <div class="flex-1 border border-slate-200 rounded-lg p-6">
+                        <h4 class="text-xl font-semibold text-green-600 mb-3">Rural Pipeline (Speed Optimized)</h4>
+                        <ul class="list-disc list-inside space-y-2 text-slate-700">
+                            <li><strong class="font-medium">fast-orthophoto:</strong> <span class="text-green-600 font-bold">true</span> (Skips 3D model)</li>
+                            <li><strong class="font-medium">feature-quality:</strong> low (Ideal for homogenous terrain)</li>
+                            <li><strong class="font-medium">orthophoto-resolution:</strong> 6-10cm/pixel (Faster)</li>
+                        </ul>
+                    </div>
+                    <!-- Urban -->
+                    <div class="flex-1 border border-slate-200 rounded-lg p-6">
+                        <h4 class="text-xl font-semibold text-sky-600 mb-3">Urban Pipeline (Accuracy Optimized)</h4>
+                        <ul class="list-disc list-inside space-y-2 text-slate-700">
+                            <li><strong class="font-medium">dsm:</strong> <span class="text-sky-600 font-bold">true</span> (For building alignment)</li>
+                            <li><strong class="font-medium">feature-quality:</strong> high (For complex, detailed structures)</li>
+                            <li><strong class="font-medium">orthophoto-resolution:</strong> 3-5cm/pixel (Sharper)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- GSD Calculator Section -->
+        <section id="gsd" class="mb-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-8">GSD Calculator & Analysis</h2>
+            <p class="text-xl text-center text-slate-600 max-w-3xl mx-auto mb-10">
+                This tool translates the static GSD report into a functional calculator. It determines your final GSD based on the pipeline's 4000px resizing standard.
+            </p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Calculator -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-2xl font-semibold mb-4">Calculate Final GSD</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="camera-select" class="block text-sm font-medium text-slate-700">1. Select Camera Sensor</label>
+                            <select id="camera-select" class="mt-1 block w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="5100">Sony ILCE-5100 (6000px)</option>
+                                <option value="7RM2">Sony ILCE-7RM2 (7952px)</option>
+                                <option value="7RM4A">Sony ILCE-7RM4A (9504px)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="gsd-input" class="block text-sm font-medium text-slate-700">2. Enter Your Input GSD (cm/pixel)</label>
+                            <input type="number" id="gsd-input" placeholder="e.g., 2.5" class="mt-1 block w-full p-2 border border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <button id="gsd-calculate-btn" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
+                            Calculate
+                        </button>
+                    </div>
+                    <div class="mt-6 p-4 bg-slate-50 rounded-lg min-h-[100px]" id="gsd-result-output">
+                        <p class="text-slate-500 text-center">Your results will appear here.</p>
+                    </div>
+                </div>
+                <!-- GSD Reference Table -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-2xl font-semibold mb-4">GSD Reference</h3>
+                    <p class="text-slate-600 mb-4">All calculations are based on the pipeline's resizing logic:</p>
+                    <ul class="mb-4 space-y-2">
+                        <li class="p-2 bg-slate-100 rounded"><strong>Ratio</strong> = Original Width / 4000px</li>
+                        <li class="p-2 bg-slate-100 rounded"><strong>Final GSD</strong> = ((Input GSD × Ratio) + 1.5cm)</li>
+                    </ul>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-200">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Camera Model</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Ratio</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Ideal Range (Final)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-slate-200">
+                                <tr>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-900">Sony ILCE-5100</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-600">1.500</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-600">4.5 - 6.0 cm</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-900">Sony ILCE-7RM2</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-600">1.988</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-600">5.5 - 7.5 cm</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-900">Sony ILCE-7RM4A</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-600">2.376</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-600">3.9 - 6.3 cm</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Project Status Section -->
+        <section id="status" class="mb-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center mb-8">Project Status & Next Steps</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-2xl font-semibold text-green-600 mb-4">Completed</h3>
+                    <ul class="list-disc list-inside space-y-2 text-lg text-slate-700">
+                        <li>Rural Pipeline is complete and operationally validated.</li>
+                        <li>Core "Divide and Conquer" architecture is stable.</li>
+                        <li>Automated GPS injection and ML-driven batching.</li>
+                        <li>Advanced OpenCV + GDAL blending pipeline.</li>
+                        <li>Full GUI launcher with Docker integration.</li>
+                    </ul>
+                </div>
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-2xl font-semibold text-amber-600 mb-4">Immediate Roadmap</h3>
+                    <ul class="list-disc list-inside space-y-2 text-lg text-slate-700">
+                        <li>Finalize parameter tuning for the Urban Pipeline.</li>
+                        <li>Refine and beautify the launcher GUI.</li>
+                        <li>Package the entire application as a standalone .exe installer.</li>
+                        <li>Implement application encryption and licensing.</li>
+                        <li>Perform final QA testing on both pipelines.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center p-8 border-t border-slate-200 mt-12">
+        <p class="text-slate-500">RLTM V1 By AccelUAV</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Smooth Scrolling ---
+            document.querySelectorAll('nav a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const targetElement = document.querySelector(this.getAttribute('href'));
+                    if(targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+
+            // --- 9-Step Workflow Interaction ---
+            const workflowData = {
+                "1": {
+                    title: "Step 1: Preprocessing & GPS Injection",
+                    text: "Reads all raw images and intelligently injects missing GPS coordinates (Lat, Lon, Alt) from an ancillary CSV file directly into the image EXIF data. This ensures all data is geo-referenced before processing.",
+                    tech: ["PILLOW", "PIEXIF", "PANDAS"]
+                },
+                "2": {
+                    title: "Step 2: GPS Extraction",
+                    text: "Reads the (now complete) EXIF data from all images and builds a central metadata file. This file becomes the 'source of truth' for all subsequent geospatial steps.",
+                    tech: ["PILLOW", "PIEXIF"]
+                },
+                "3": {
+                    title: "Step 3: Flight-Line Detection",
+                    text: "Applies the DBSCAN clustering algorithm, a machine learning technique, to the GPS points. This intelligently identifies distinct, linear flight lines from the raw coordinate data.",
+                    tech: ["SKLEARN.DBSCAN", "PANDAS"]
+                },
+                "4": {
+                    title: "Step 4: Parallel Grouping",
+                    text: "Groups the detected flight lines for logical sorting. This step is crucial for ensuring the 'divide and conquer' batches are created in a sensible order that follows the drone's flight path.",
+                    tech: ["PANDAS"]
+                },
+                "5": {
+                    title: "Step 5: Batch Creation",
+                    text: "Divides the sorted list of images into small, overlapping batches (e.g., 120 images with a 20-image overlap) and copies the physical files into separate folders for processing.",
+                    tech: ["SHUTIL", "OS"]
+                },
+                "6": {
+                    title: "Step 6: Verification",
+                    text: "Performs a quick check to ensure all images are correctly assigned to a batch and that the overlap logic is correctly applied, preventing gaps in the final map.",
+                    tech: ["OS"]
+                },
+                "7": {
+                    title: "Step 7: Visualization (Optional)",
+                    text: "Generates a Matplotlib scatter plot of the GPS points, color-coded by batch. This provides a human-readable 'sanity check' to visually confirm the batching logic is correct.",
+                    tech: ["MATPLOTLIB"]
+                },
+                "8": {
+                    title: "Step 8: ODM Processing (The Loop)",
+                    text: "The core 'divide and conquer' loop. The orchestrator calls the ODM Client (oem1.py) for each batch. The client sends the small batch to the NodeODM engine, which generates a small orthomosaic TIFF.",
+                    tech: ["PYODM", "SUBPROCESS", "DOCKER"]
+                },
+                "9": {
+                    title: "Step 9: Merging & Blending (The Final Stitch)",
+                    text: "The final stage. It first 'feathers' the edges of each batch TIFF using OpenCV, reprojects them all to a common CRS using Rasterio, stitches them into a single Cloud Optimized GeoTIFF (COG) using GDAL, and builds overviews.",
+                    tech: ["OPENCV (CV2)", "RASTERIO", "GDAL (GDALWARP)", "GDAL (GDALADDO)"]
+                }
+            };
+
+            const techStackData = [
+                { name: "PYQT5", desc: "The Control Panel. Provides the complete, standalone Graphical User Interface (GUI) for one-click operation." },
+                { name: "SUBPROCESS", desc: "The System Orchestrator. The 'glue' that allows the launcher to start/stop the Docker engine and execute the main Python pipeline script." },
+                { name: "PANDAS", desc: "Data Ingestion. Reads the ancillary .csv file into memory, making GPS data instantly available for correction." },
+                { name: "PILLOW & PIEXIF", desc: "Automated Data Correction. The 'EXIF Injector.' Physically writes the GPS Lat/Lon/Alt from pandas into the image files, fixing missing data." },
+                { name: "SKLEARN (DBSCAN)", desc: "Intelligent Flight-Line Analysis. A critical Machine Learning algorithm that finds patterns (the flight lines) in the GPS data." },
+                { name: "PYODM", desc: "The Communicator (API Client). Allows the pipeline to send processing jobs and parameters directly to the NodeODM engine." },
+                { name: "OPENCV (CV2)", desc: "The Seamless Blending Engine. The 'airbrush' that solves the 'checkerboard seam' problem by creating a smooth, blurred alpha channel (feathering) on tile edges." },
+                { name: "RASTERIO", desc: "Geospatial I/O & CRS Mgmt. Reads/writes geospatial TIFFs. Its critical role is ensuring all batches share a common Coordinate Reference System (CRS) before merging." },
+                { name: "GDAL (GDALWARP)", desc: "The Master Mosaicing Engine. The industry-standard tool for mosaicing all the feathered tiles into the final, massive Cloud Optimized GeoTIFF." },
+                { name: "GDAL (GDALADDO)", desc: "The Performance Optimizer. Builds pyramids (overviews) for the final COG, allowing it to be loaded instantly in QGIS or other viewers." }
+            ];
+
+            const workflowSteps = document.querySelectorAll('.workflow-step');
+            const detailTitle = document.getElementById('workflow-title');
+            const detailText = document.getElementById('workflow-text');
+            const detailTech = document.getElementById('workflow-tech');
+            const techStackGrid = document.getElementById('tech-stack-grid');
+
+            function updateWorkflowDetails(step) {
+                const data = workflowData[step];
+                if (!data) return;
+
+                detailTitle.textContent = data.title;
+                detailText.textContent = data.text;
+                
+                detailTech.innerHTML = '';
+                data.tech.forEach(techName => {
+                    const badge = document.createElement('span');
+                    badge.textContent = techName;
+                    badge.className = 'bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded';
+                    detailTech.appendChild(badge);
+                });
+            }
+
+            workflowSteps.forEach(step => {
+                step.addEventListener('click', () => {
+                    workflowSteps.forEach(s => s.classList.remove('active'));
+                    step.classList.add('active');
+                    const stepNumber = step.getAttribute('data-step');
+                    updateWorkflowDetails(stepNumber);
+                });
+            });
+
+            // --- Tech Stack Grid ---
+            techStackData.forEach(tech => {
+                const card = document.createElement('div');
+                card.className = 'tech-card';
+                card.innerHTML = `
+                    <h3 class="text-xl font-bold text-blue-600 mb-2">${tech.name}</h3>
+                    <p class="text-slate-600">${tech.desc}</p>
+                `;
+                techStackGrid.appendChild(card);
+            });
+
+            // --- Performance Chart (Chart.js) ---
+            const ctx = document.getElementById('perfChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Average Batch Time'],
+                    datasets: [
+                        {
+                            label: 'Min Time (min)',
+                            data: [3.6],
+                            backgroundColor: 'rgba(59, 130, 246, 0.7)', // blue-500
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Max Time (min)',
+                            data: [11],
+                            backgroundColor: 'rgba(14, 165, 233, 0.7)', // sky-500
+                            borderColor: 'rgba(14, 165, 233, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: false,
+                        },
+                        legend: {
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw} minutes`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Processing Time (Minutes)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // --- GSD Calculator ---
+            const cameraData = {
+                "5100": { name: "Sony ILCE-5100", ratio: 1.500, range: [4.5, 6.0] },
+                "7RM2": { name: "Sony ILCE-7RM2", ratio: 1.988, range: [5.5, 7.5] },
+                "7RM4A": { name: "Sony ILCE-7RM4A", ratio: 2.376, range: [3.9, 6.3] }
+            };
+
+            const calcButton = document.getElementById('gsd-calculate-btn');
+            const cameraSelect = document.getElementById('camera-select');
+            const gsdInput = document.getElementById('gsd-input');
+            const resultOutput = document.getElementById('gsd-result-output');
+
+            calcButton.addEventListener('click', () => {
+                const cameraID = cameraSelect.value;
+                const inputGSD = parseFloat(gsdInput.value);
+                
+                if (isNaN(inputGSD) || inputGSD <= 0) {
+                    resultOutput.innerHTML = `<p class="calc-result calc-result-bad text-center">Please enter a valid Input GSD.</p>`;
+                    return;
+                }
+
+                const camera = cameraData[cameraID];
+                const finalGSD = (inputGSD * camera.ratio) + 1.5;
+                const [min, max] = camera.range;
+
+                let quality = "calc-result-good";
+                let text = `Ideal (${min.toFixed(1)}-${max.toFixed(1)} cm)`;
+
+                if (finalGSD < min) {
+                    quality = "calc-result-warn";
+                    text = `Survey-Grade (Better than ideal)`;
+                } else if (finalGSD > max) {
+                    quality = "calc-result-bad";
+                    text = `Standard Mapping (Outside ideal ${min.toFixed(1)}-${max.toFixed(1)} cm range)`;
+                }
+
+                resultOutput.innerHTML = `
+                    <p class="text-slate-700 text-sm">For a ${camera.name}:</p>
+                    <p class="calc-result text-slate-800">Final GSD: <span class="text-blue-600">${finalGSD.toFixed(2)} cm/pixel</span></p>
+                    <p class="calc-result ${quality}">${text}</p>
+                `;
+            });
+
+            // Initialize default workflow view
+            updateWorkflowDetails("1");
+
+        });
+    </script>
+</body>
+</html>
